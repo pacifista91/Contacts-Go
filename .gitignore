@@ -1,0 +1,8 @@
+.DS_Store
+.vscode/
+build/
+*.zip
+*.tar.gz
+*.tar.xz
+engine_test/
+debug-info/
