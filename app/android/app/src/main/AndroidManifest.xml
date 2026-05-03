@@ -20,7 +20,6 @@
         android:name="${applicationName}"
         android:icon="@mipmap/app_icon"
         android:roundIcon="@mipmap/app_icon_round"
-        android:extractNativeLibs="true"
         android:requestLegacyExternalStorage="true">
 
         <service

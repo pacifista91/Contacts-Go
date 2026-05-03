@@ -12,6 +12,6 @@ CC_ARM64 = $(NDK_PATH)/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-
 build-engine-android:
 	mkdir -p app/android/app/src/main/jniLibs/arm64-v8a
 	cd engine && GOOS=android GOARCH=arm64 CGO_ENABLED=1 CC=$(CC_ARM64) \
-		go build -o ../app/android/app/src/main/jniLibs/arm64-v8a/libengine.so -ldflags="-s -w -checklinkname=0" -trimpath -buildmode=c-shared main.go
+		go build -o ../app/android/app/src/main/jniLibs/arm64-v8a/libengine.so -ldflags="-checklinkname=0" -buildmode=c-shared main.go
 
 all: build-engine-macos

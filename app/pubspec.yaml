@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-
+  cupertino_icons: ^1.0.8
   ffi: ^2.2.0
   path_provider: ^2.1.5
   path: ^1.9.1
@@ -30,7 +30,11 @@ dependencies:
   # Premium typography
   google_fonts: ^6.2.1
 
+  # Audio - DTMF tones
+  audioplayers: ^6.1.0
 
+  # Haptic feedback
+  vibration: ^2.0.0
 
 dev_dependencies:
   flutter_test:
