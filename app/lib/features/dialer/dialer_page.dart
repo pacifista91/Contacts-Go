@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../models/contact.dart';
 import '../../core/ffi_bridge.dart';
 import '../../core/call_service.dart';
@@ -65,6 +66,7 @@ class _DialerPageState extends State<DialerPage> with SingleTickerProviderStateM
   }
 
   void _onDigitPressed(String digit) {
+    HapticFeedback.lightImpact();
     setState(() {
       input += digit;
       _updateSuggestions();
@@ -293,8 +295,9 @@ class _DialerPageState extends State<DialerPage> with SingleTickerProviderStateM
                       children: [
                         const SizedBox(width: 56),
                         _CallButton(
-                          size: 72,
+                          size: 80,
                           onTap: () {
+                            HapticFeedback.mediumImpact();
                             if (input.isNotEmpty) _makeCall(input);
                           },
                         ),
@@ -342,32 +345,29 @@ class _CallButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    
     return Container(
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF00E676), Color(0xFF00C853)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        borderRadius: BorderRadius.circular(size),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00E676).withValues(alpha: 0.4),
-            blurRadius: 24,
-            spreadRadius: 2,
-            offset: const Offset(0, 8),
+            color: colors.primary.withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Material(
-        color: Colors.transparent,
+        color: const Color(0xFF34A853), // Google Green
+        borderRadius: BorderRadius.circular(size / 2.5),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(size),
-          splashColor: Colors.white.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(size / 2.5),
+          splashColor: Colors.white.withValues(alpha: 0.2),
           child: SizedBox(
-            width: size,
-            height: size,
+            width: size * 1.3,
+            height: size * 0.85,
             child: Icon(Icons.call_rounded, color: Colors.white, size: size * 0.45),
           ),
         ),

@@ -123,6 +123,116 @@ class _ContactListPageState extends State<ContactListPage> {
     });
   }
 
+  // ─── Remove Duplicates ─────────────────────────────────────────────────────
+
+  String _normalizePhone(String phone) {
+    return phone.replaceAll(RegExp(r'[\s\-\(\)\.]'), '');
+  }
+
+  void _removeDuplicates() async {
+    // Group contacts by normalized phone number
+    final Map<String, List<Contact>> phoneGroups = {};
+    for (final c in contacts) {
+      if (c.phone.isEmpty) continue;
+      final normalized = _normalizePhone(c.phone);
+      phoneGroups.putIfAbsent(normalized, () => []);
+      phoneGroups[normalized]!.add(c);
+    }
+
+    // Find groups with duplicates
+    final duplicateGroups = phoneGroups.entries.where((e) => e.value.length > 1).toList();
+
+    if (duplicateGroups.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No duplicate contacts found!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Count total duplicates that will be removed
+    int totalDuplicates = duplicateGroups.fold<int>(0, (sum, g) => sum + g.value.length - 1);
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: Icon(Icons.merge_rounded, size: 32, color: Theme.of(context).colorScheme.primary),
+        title: const Text('Remove Duplicates?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Found $totalDuplicates duplicate(s) across ${duplicateGroups.length} phone number(s).'),
+            const SizedBox(height: 12),
+            Text(
+              'Duplicates will be merged: the most recent contact is kept, and any missing fields are filled from older entries.',
+              style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.merge_rounded, size: 18),
+            label: const Text('Merge'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    int mergedCount = 0;
+    for (final group in duplicateGroups) {
+      final dupes = group.value;
+      // Sort by updatedAt descending — most recent first
+      dupes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+      // Primary = most recent; fill blanks from others
+      Contact primary = dupes.first;
+      for (int i = 1; i < dupes.length; i++) {
+        final other = dupes[i];
+        primary = primary.copyWith(
+          firstName: primary.firstName.isEmpty ? other.firstName : null,
+          lastName: primary.lastName.isEmpty ? other.lastName : null,
+          nickname: primary.nickname.isEmpty ? other.nickname : null,
+          email: primary.email.isEmpty ? other.email : null,
+          organization: primary.organization.isEmpty ? other.organization : null,
+          note: primary.note.isEmpty ? other.note : null,
+          isFavorite: primary.isFavorite || other.isFavorite ? true : null,
+          updatedAt: DateTime.now().millisecondsSinceEpoch,
+        );
+      }
+
+      // Save merged primary
+      FFIBridge.saveContact(primary.toJson());
+
+      // Delete all others
+      for (int i = 1; i < dupes.length; i++) {
+        FFIBridge.deleteContact(dupes[i].id);
+        mergedCount++;
+      }
+    }
+
+    _loadContacts();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✓ Merged $mergedCount duplicate(s) successfully'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   List<Contact> get _filtered {
     if (searchQuery.isEmpty) return contacts;
     final q = searchQuery.toLowerCase();
@@ -200,7 +310,11 @@ class _ContactListPageState extends State<ContactListPage> {
                 ),
               ],
             )
-          : null,
+          : AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+            ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : Column(
@@ -241,6 +355,8 @@ class _ContactListPageState extends State<ContactListPage> {
                                 onSelected: (val) {
                                   if (val == 'import') {
                                     _import();
+                                  } else if (val == 'remove_duplicates') {
+                                    _removeDuplicates();
                                   } else {
                                     _export(val);
                                   }
@@ -250,6 +366,17 @@ class _ContactListPageState extends State<ContactListPage> {
                                   const PopupMenuItem(value: 'vcf', child: Text('Export VCF')),
                                   const PopupMenuItem(value: 'csv', child: Text('Export CSV')),
                                   const PopupMenuItem(value: 'md', child: Text('Export Markdown')),
+                                  const PopupMenuDivider(),
+                                  const PopupMenuItem(
+                                    value: 'remove_duplicates',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.merge_rounded, size: 20),
+                                        SizedBox(width: 12),
+                                        Text('Remove Duplicates'),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
@@ -336,7 +463,7 @@ class _ContactListPageState extends State<ContactListPage> {
                                 FilledButton.icon(
                                   onPressed: () => _navigateToDetail(null),
                                   icon: const Icon(Icons.person_add_rounded),
-                                  label: const Text('Add Contact', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  label: const Text('Add contacts', style: TextStyle(fontWeight: FontWeight.bold)),
                                   style: FilledButton.styleFrom(
                                     backgroundColor: const Color(0xFF63C2B6), // Matching the button color from screenshot
                                     foregroundColor: Colors.white,
@@ -367,7 +494,7 @@ class _ContactListPageState extends State<ContactListPage> {
           ? null
           : Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                shape: BoxShape.circle,
                 gradient: LinearGradient(
                   colors: [colors.primary, colors.tertiary],
                   begin: Alignment.topLeft,
@@ -375,23 +502,24 @@ class _ContactListPageState extends State<ContactListPage> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: colors.primary.withValues(alpha: 0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    color: colors.primary.withValues(alpha: 0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
-              child: FloatingActionButton.extended(
+              child: FloatingActionButton(
                 onPressed: () => _navigateToDetail(null),
-                icon: const Icon(Icons.person_add_rounded, color: Colors.white),
-                label: const Text('New', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 elevation: 0,
                 backgroundColor: Colors.transparent,
                 focusElevation: 0,
                 hoverElevation: 0,
                 highlightElevation: 0,
+                shape: const CircleBorder(),
+                child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
               ),
             ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

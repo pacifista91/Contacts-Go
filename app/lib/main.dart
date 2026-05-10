@@ -9,6 +9,7 @@ import 'features/backup/backup_page.dart';
 import 'core/ffi_bridge.dart';
 import 'core/backup_daemon.dart';
 import 'core/call_service.dart';
+import 'core/contact_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 Future<void> requestPermissions() async {
@@ -31,6 +32,7 @@ Future<void> requestPermissions() async {
   await [
     Permission.phone,
     Permission.microphone,
+    Permission.contacts,
   ].request();
 }
 
@@ -42,6 +44,9 @@ void main() async {
     await FFIBridge.load();
     await initializeBackupDaemon();
     CallService().initialize();
+    
+    // Sync with system contacts on start
+    unawaited(ContactSyncService().syncWithSystem());
   } catch (e) {
     debugPrint('Startup error: $e');
   }
@@ -49,7 +54,7 @@ void main() async {
   runApp(const ContactsApp());
 }
 
-final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class ContactsApp extends StatelessWidget {
@@ -82,7 +87,7 @@ class ContactsApp extends StatelessWidget {
                   error: _kiteRed,
                 );
 
-            return MaterialApp(
+              return MaterialApp(
               debugShowCheckedModeBanner: false,
               title: 'Contacts Go',
               theme: ThemeData(
@@ -90,12 +95,14 @@ class ContactsApp extends StatelessWidget {
                 colorScheme: lightScheme,
                 textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
                 scaffoldBackgroundColor: lightScheme.surface,
+                splashFactory: InkSparkle.splashFactory,
               ),
               darkTheme: ThemeData(
                 useMaterial3: true,
                 colorScheme: darkScheme,
                 textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
                 scaffoldBackgroundColor: darkScheme.surface,
+                splashFactory: InkSparkle.splashFactory,
               ),
               themeMode: currentMode,
               navigatorKey: navigatorKey,
@@ -129,7 +136,7 @@ class _MainNavigationState extends State<MainNavigation> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      extendBody: true, // Allow body to scroll behind the nav bar
+      extendBody: true,
       body: SafeArea(
         bottom: false,
         child: Padding(
@@ -145,14 +152,11 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ),
       ),
-      bottomNavigationBar: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            padding: const EdgeInsets.only(bottom: 24.0),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.only(bottom: 24.0),
             decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: 0.75), // Translucent surface
-              border: Border(top: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.2), width: 0.5)),
+              color: colors.surface, // Clean solid background
+              border: Border(top: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.1), width: 1.0)),
             ),
             child: NavigationBar(
               selectedIndex: _selectedIndex,
@@ -182,8 +186,6 @@ class _MainNavigationState extends State<MainNavigation> {
               ],
             ),
           ),
-        ),
-      ),
     );
   }
 }

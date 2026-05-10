@@ -6,6 +6,8 @@ import 'dart:math';
 import '../../models/contact.dart';
 import '../../core/ffi_bridge.dart';
 import '../../core/call_service.dart';
+import '../../core/contact_service.dart';
+import 'package:flutter_contacts/flutter_contacts.dart' as fc;
 
 class ContactDetailPage extends StatefulWidget {
   final Contact? contact;
@@ -61,6 +63,8 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
         updatedAt: DateTime.now().millisecondsSinceEpoch,
       );
       FFIBridge.saveContact(c.toJson());
+      // Push to system
+      ContactSyncService().pushToSystem(c);
       Navigator.pop(context, true);
     }
   }
@@ -85,6 +89,8 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
       );
       if (confirm == true) {
         FFIBridge.deleteContact(widget.contact!.id);
+        // Sync with system (to remove it there too if possible, or just re-sync)
+        ContactSyncService().syncWithSystem();
         Navigator.pop(context, true);
       }
     }
@@ -99,6 +105,7 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
         updatedAt: DateTime.now().millisecondsSinceEpoch,
       );
       FFIBridge.saveContact(c.toJson());
+      ContactSyncService().pushToSystem(c);
     }
   }
 

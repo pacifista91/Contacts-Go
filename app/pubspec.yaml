@@ -23,6 +23,7 @@ dependencies:
   flutter_background_service: ^5.1.0
   flutter_background_service_android: ^6.3.1
   permission_handler: ^12.0.1
+  flutter_contacts: ^1.1.9
 
   # Material You / M3 dynamic color
   dynamic_color: ^1.7.0
@@ -50,7 +51,7 @@ flutter:
 flutter_launcher_icons:
   android: "app_icon"
   ios: false
-  image_path: "assets/app_icon.png" # Fallback
-  adaptive_icon_background: "#FFFFFF" # White background
-  adaptive_icon_foreground: "assets/app_icon_foreground.png" # Transparent leaf foreground
+  image_path: "assets/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/app_icon.png"
   min_sdk_android: 21
